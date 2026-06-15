@@ -471,7 +471,7 @@ Campos: nome, carteira (só números/hifens), validade (MM/AAAA), plano, conveni
 Se não for carteira: {"erro":"Imagem não reconhecida como carteira de convênio"}`;
   const res = await fetch("/api/claude", {
     method:"POST", headers:{"Content-Type":"application/json"},
-    body: JSON.stringify({ model:"claude-sonnet-4-20250514", max_tokens:800,
+    body: JSON.stringify({ model:"claude-sonnet-4-6", max_tokens:800,
       messages:[{role:"user",content:[
         {type:"image",source:{type:"base64",media_type:mimeType,data:base64Image}},
         {type:"text",text:prompt}
@@ -510,13 +510,13 @@ Gere um HTML completo e bem formatado que:
 3. Cores do convênio: Bradesco=vermelho escuro(#8B0000), SulAmérica=azul(#003DA5), Unimed=verde(#006633), Maximed=vermelho(#C0392B), Amil=azul(#003DA5), CASSI=azul(#003F87) laranja(#F7941D), Camed=verde(#007A3D), Saúde Petrobras=verde(#009640)
 4. Todos os campos preenchidos com os dados acima
 5. Seções: Dados do Beneficiário, Dados do Contratado Solicitante, Dados do Hospital/Internação, Indicação Clínica, CIDs, Procedimentos, OPMEs (se houver), Dados da Autorização, Assinaturas
-6. CSS inline para impressão A4 (max-width:210mm, font-size:8pt, padding adequado)
+6. CSS inline para impressão A4 (max-width:210mm, font-size:8pt, padding:15mm). OBRIGATÓRIO incluir no <style>: @page { margin: 0; size: A4; } para suprimir URL e numeração automática do navegador.
 7. Campos não preenchidos devem aparecer em branco (não escrever "N/A" nem traços)
 8. Retorne APENAS o HTML completo começando com <!DOCTYPE html>, sem markdown`;
 
   const res = await fetch("/api/claude", {
     method:"POST", headers:{"Content-Type":"application/json"},
-    body: JSON.stringify({ model:"claude-sonnet-4-20250514", max_tokens:4000,
+    body: JSON.stringify({ model:"claude-sonnet-4-6", max_tokens:4000,
       messages:[{role:"user",content:prompt}]
     })
   });
@@ -1122,8 +1122,16 @@ const TCLE_DB = {
   "31205070": {
     titulo: "VASECTOMIA BILATERAL",
     procedimento: "VASECTOMIA BILATERAL",
-    lateralidade: "( ) Esquerdo  ( ) Direito  ( ) Bilateral  ( ) Não se aplica",
-    descricao: "Procedimento cirúrgico de esterilização masculina que consiste na secção e ligadura dos canais deferentes, impedindo a passagem dos espermatozoides. É considerado um método contraceptivo permanente.",
+    lateralidade: "( ) Esquerdo  ( ) Direito  ( X ) Bilateral  ( ) Não se aplica",
+    descricao: `VASECTOMIA BILATERAL é uma cirurgia de esterilização masculina permanente. Trata-se de um procedimento cirúrgico voluntário e eletivo, com o objetivo de impedir a reprodução humana, como método contraceptivo, tornando o homem incapaz de engravidar uma mulher através de relação sexual.
+
+Trata-se de um procedimento irreversível ou de reversibilidade incerta e limitada. Por essa razão, deve ser uma escolha exercida pelo paciente de forma autônoma, consciente, responsável e isenta de dúvida; e só pode ser realizada 60 dias após ter sido solicitada pelo paciente à equipe médica.
+
+Fui incentivado a considerar métodos contraceptivos reversíveis, como preservativos, pílulas, DIU, injeções, implantes e métodos comportamentais. Fui orientado a procurar um serviço de regulação da fecundidade, com equipe multidisciplinar, para esclarecimentos adicionais durante o período de reflexão obrigatório de 60 (sessenta) dias.
+
+Tenho plena capacidade civil e preencho os critérios legais para realizar o procedimento (idade mínima de 21 anos ou dois filhos vivos – art. 10, da Lei nº 9.263/1996).
+
+O procedimento de VASECTOMIA BILATERAL consiste na interrupção dos canais por onde passam os espermatozoides (canais deferentes), por meio de cortes no escroto, com anestesia a ser definida previamente, promovendo a interrupção permanente da passagem de espermatozoides.`,
     sintomas: [
       "Dor ou desconforto leve na bolsa escrotal nos primeiros dias.",
       "Inchaço leve e hematomas na região escrotal.",
@@ -1177,7 +1185,7 @@ Data: ${cidadeData}
 O HTML deve incluir: cabeçalho SBU, identificação do paciente, descrição do procedimento, sintomas pós-operatórios, riscos/complicações, cuidados pós-alta, seção de autorização com campos para assinatura do paciente, responsável, testemunhas e médico. CSS inline para A4. Retorne APENAS o HTML.`;
     const res = await fetch("/api/claude", {
       method:"POST", headers:{"Content-Type":"application/json"},
-      body: JSON.stringify({ model:"claude-sonnet-4-20250514", max_tokens:4000,
+      body: JSON.stringify({ model:"claude-sonnet-4-6", max_tokens:4000,
         messages:[{role:"user",content:prompt}] })
     });
     const data = await res.json();
@@ -1219,7 +1227,8 @@ O HTML deve incluir: cabeçalho SBU, identificação do paciente, descrição do
   .medico-section { margin-top:16px; border:1px solid #ccc; padding:10px; }
   .clearfix::after { content:""; display:table; clear:both; }
   .declaro-box { background:#f9f9f9; border-left:3px solid #003366; padding:8px 12px; margin:10px 0; font-size:9pt; line-height:1.6; }
-  @media print { body { padding:15mm; } }
+  @page { margin: 0; size: A4; }
+  @media print { body { padding:15mm 15mm 15mm 15mm; } }
 </style>
 </head>
 <body>
@@ -1255,8 +1264,8 @@ O HTML deve incluir: cabeçalho SBU, identificação do paciente, descrição do
 
 <div class="clearfix">
   <div class="rubrica-box">Rubrica do<br>paciente ou<br>rep. legal</div>
+  <div style="clear:both; padding-top:4px;"></div>
 </div>
-<p class="page-num">Página 1 de ${tcleBase.riscos.length > 8 ? "3" : "2"}</p>
 
 <div style="border-top:1px solid #ddd; margin-top:20px; padding-top:16px;">
 <h2>Riscos / Complicações:</h2>
