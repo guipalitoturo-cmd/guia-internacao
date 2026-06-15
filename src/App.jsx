@@ -804,14 +804,580 @@ table{border-collapse:collapse;width:100%;table-layout:fixed;}
 </html>`;
 }
 
+// ─── HELPERS PARA TEMPLATES ESTÁTICOS ────────────────────────────────────────
+function _cssBase(cor) {
+  return `<style>
+    @page{margin:0;size:A4 portrait}
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:Arial,Helvetica,sans-serif;font-size:6.5pt;width:210mm;min-height:297mm;padding:5mm 7mm;color:#000;background:#fff}
+    table{width:100%;border-collapse:collapse}
+    td{border:1px solid #000;vertical-align:top;padding:0}
+    .lbl{font-size:5pt;color:#555;padding:1px 2px 0;display:block;line-height:1.3}
+    .val{font-size:6.5pt;padding:1px 3px 2px;display:block;min-height:11px}
+    .sec{background:${cor};color:#fff;font-weight:bold;font-size:6.5pt;padding:2px 4px}
+    .no-border{border:none}
+    .sig{min-height:22px}
+    .row-proc td{height:11px}
+  </style>`;
+}
+function _procRows(todosProcs, n=5) {
+  return Array.from({length:n},(_,i)=>{
+    const p = todosProcs[i];
+    return `<tr class="row-proc">
+      <td style="width:3%"><span class="val">${i+1}</span></td>
+      <td style="width:7%"><span class="val">${p?p.tabela||'':''}</span></td>
+      <td style="width:15%"><span class="val">${p?p.codigo||'':''}</span></td>
+      <td style="width:55%"><span class="val">${p?p.nome||'':''}</span></td>
+      <td style="width:10%"><span class="val">${p?'1':''}</span></td>
+      <td style="width:10%"><span class="val"></span></td>
+    </tr>`;
+  }).join('');
+}
+function _procRows12(todosProcs) {
+  return Array.from({length:12},(_,i)=>{
+    const p = todosProcs[i];
+    return `<tr class="row-proc">
+      <td style="width:4%;font-size:5.5pt;padding:1px 2px">${i<9?'0':''}${i+1}</td>
+      <td style="width:6%"><span class="val">${p?p.tabela||'':''}</span></td>
+      <td style="width:14%"><span class="val">${p?p.codigo||'':''}</span></td>
+      <td style="width:56%"><span class="val">${p?p.nome||'':''}</span></td>
+      <td style="width:10%"><span class="val">${p?'1':''}</span></td>
+      <td style="width:10%"><span class="val"></span></td>
+    </tr>`;
+  }).join('');
+}
+function _opmRows(opmes, n=5) {
+  return Array.from({length:n},(_,i)=>{
+    const o = opmes[i];
+    return `<tr class="row-proc">
+      <td style="width:3%"><span class="val">${i+1}</span></td>
+      <td style="width:7%"><span class="val"></span></td>
+      <td style="width:15%"><span class="val"></span></td>
+      <td style="width:40%"><span class="val">${o?o.descricao||'':''}</span></td>
+      <td style="width:10%"><span class="val">${o?o.quantidade||'':''}</span></td>
+      <td style="width:12%"><span class="val"></span></td>
+      <td style="width:13%"><span class="val"></span></td>
+    </tr>`;
+  }).join('');
+}
+function _commonFields(dados) {
+  const {paciente,medico,procPrincipal,procsSecundarios,justificativa,opmes,carater,regime,diarias,cid} = dados;
+  const hospital = paciente.hospital==='__outro__'?(paciente.hospitalCustom||''):paciente.hospital;
+  const dataHoje = new Date().toLocaleDateString('pt-BR');
+  const regimeTexto = {'1':'Hospitalar','2':'Hospital-dia','3':'Domiciliar'}[regime]||'Hospitalar';
+  const caraterTexto = carater==='E'?'E - Eletiva':'U - Urgência/Emergência';
+  const tipoInternacao = '2 - Cirúrgica';
+  const todosProcs = [procPrincipal,...procsSecundarios].filter(Boolean);
+  const nGuia = String(Date.now()).slice(-8);
+  return {paciente,medico,hospital,dataHoje,regimeTexto,caraterTexto,tipoInternacao,todosProcs,nGuia,opmes:opmes||[],cid:cid||'',justificativa:justificativa||''};
+}
+
+// ─── TEMPLATE SULAMERICA ───────────────────────────────────────────────────────
+function gerarGuiaSulAmerica(dados) {
+  const {paciente,medico,hospital,dataHoje,regimeTexto,caraterTexto,tipoInternacao,todosProcs,nGuia,opmes,cid,justificativa} = _commonFields(dados);
+  const COR = '#003087';
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8">
+${_cssBase(COR)}
+</head><body>
+<table style="margin-bottom:3px"><tr>
+  <td class="no-border" style="width:60%;padding:2px 0">
+    <div style="font-size:9pt;font-weight:bold;color:${COR}">SulAmérica</div>
+    <div style="font-size:5.5pt;color:#555">BB Seguros / Brasilsaúde / SulAmérica</div>
+  </td>
+  <td class="no-border" style="width:40%;text-align:right">
+    <div style="font-size:8pt;font-weight:bold">GUIA DE SOLICITAÇÃO DE INTERNAÇÃO</div>
+    <div style="font-size:5.5pt">Registro ANS nº 0053.0063.0097</div>
+  </td>
+</tr></table>
+<table style="margin-bottom:1px"><tr>
+  <td colspan="5"><span class="sec">DADOS DO BENEFICIÁRIO</span></td>
+</tr><tr>
+  <td style="width:35%"><span class="lbl">2 - Nome do Beneficiário</span><span class="val">${paciente.nome}</span></td>
+  <td style="width:25%"><span class="lbl">3 - Número da Carteira</span><span class="val">${paciente.carteira}</span></td>
+  <td style="width:15%"><span class="lbl">4 - Validade</span><span class="val">${paciente.validade}</span></td>
+  <td style="width:15%"><span class="lbl">5 - Plano</span><span class="val">${paciente.plano||''}</span></td>
+  <td style="width:10%"><span class="lbl">6 - CNS</span><span class="val">${paciente.cns||''}</span></td>
+</tr></table>
+<table style="margin-bottom:1px"><tr>
+  <td colspan="4"><span class="sec">DADOS DO SOLICITANTE</span></td>
+</tr><tr>
+  <td style="width:40%"><span class="lbl">7 - Nome do Contratado Solicitante</span><span class="val">${medico.nome}</span></td>
+  <td style="width:20%"><span class="lbl">8 - Código na Operadora/CNPJ</span><span class="val"></span></td>
+  <td style="width:20%"><span class="lbl">9 - ${medico.conselho}-${medico.uf} nº</span><span class="val">${medico.numero}</span></td>
+  <td style="width:20%"><span class="lbl">10 - CBO-S</span><span class="val">${medico.cbo}</span></td>
+</tr><tr>
+  <td colspan="2"><span class="lbl">11 - Nome do Profissional Solicitante</span><span class="val">${medico.nome}</span></td>
+  <td><span class="lbl">Conselho</span><span class="val">${medico.conselho}-${medico.uf} ${medico.numero}</span></td>
+  <td><span class="lbl">RQE</span><span class="val">${medico.rqe}</span></td>
+</tr></table>
+<table style="margin-bottom:1px"><tr>
+  <td colspan="5"><span class="sec">DADOS DA INTERNAÇÃO</span></td>
+</tr><tr>
+  <td style="width:40%"><span class="lbl">13 - Estabelecimento Solicitado</span><span class="val">${hospital}</span></td>
+  <td style="width:15%"><span class="lbl">14 - Caráter</span><span class="val">${caraterTexto}</span></td>
+  <td style="width:20%"><span class="lbl">15 - Tipo de Internação</span><span class="val">${tipoInternacao}</span></td>
+  <td style="width:15%"><span class="lbl">16 - Regime</span><span class="val">${regimeTexto}</span></td>
+  <td style="width:10%"><span class="lbl">17 - Diárias</span><span class="val">${dados.diarias}</span></td>
+</tr><tr>
+  <td colspan="2"><span class="lbl">18 - CID-10 Principal</span><span class="val">${cid}</span></td>
+  <td colspan="2"><span class="lbl">19 - CID-10 Secundário</span><span class="val"></span></td>
+  <td><span class="lbl">20 - Data Solicitação</span><span class="val">${dataHoje}</span></td>
+</tr><tr>
+  <td colspan="5"><span class="lbl">Nº Guia</span><span class="val">${nGuia}</span></td>
+</tr></table>
+<table style="margin-bottom:1px"><tr>
+  <td colspan="6"><span class="sec">PROCEDIMENTOS / EXAMES SOLICITADOS</span></td>
+</tr><tr>
+  <td style="width:3%"><span class="lbl">Seq</span></td>
+  <td style="width:7%"><span class="lbl">21 - Tab.</span></td>
+  <td style="width:15%"><span class="lbl">22 - Código</span></td>
+  <td style="width:55%"><span class="lbl">23 - Descrição</span></td>
+  <td style="width:10%"><span class="lbl">24 - Qtd</span></td>
+  <td style="width:10%"><span class="lbl">25 - Via</span></td>
+</tr>
+${_procRows(todosProcs,5)}
+</table>
+<table style="margin-bottom:1px"><tr>
+  <td colspan="7"><span class="sec">DADOS DO OPME</span></td>
+</tr><tr>
+  <td style="width:3%"><span class="lbl">Seq</span></td>
+  <td style="width:7%"><span class="lbl">Tab.</span></td>
+  <td style="width:15%"><span class="lbl">Código</span></td>
+  <td style="width:40%"><span class="lbl">38 - Descrição OPME</span></td>
+  <td style="width:10%"><span class="lbl">39 - Qtd</span></td>
+  <td style="width:12%"><span class="lbl">40 - Valor Unit.</span></td>
+  <td style="width:13%"><span class="lbl">41 - Valor Total</span></td>
+</tr>
+${_opmRows(opmes,5)}
+</table>
+<table style="margin-bottom:1px"><tr>
+  <td><span class="sec">JUSTIFICATIVA / INDICAÇÃO CLÍNICA</span></td>
+</tr><tr>
+  <td style="min-height:30px"><span class="val">${justificativa}</span></td>
+</tr></table>
+<table><tr>
+  <td style="width:50%"><span class="lbl">Assinatura e Carimbo do Médico Solicitante</span><span class="sig"></span></td>
+  <td style="width:25%"><span class="lbl">Data</span><span class="val">${dataHoje}</span></td>
+  <td style="width:25%"><span class="lbl">Assinatura do Beneficiário</span><span class="sig"></span></td>
+</tr></table>
+</body></html>`;
+}
+
+// ─── TEMPLATE UNIMED RECIFE ────────────────────────────────────────────────────
+function gerarGuiaUnimed(dados) {
+  const {paciente,medico,hospital,dataHoje,regimeTexto,caraterTexto,tipoInternacao,todosProcs,nGuia,opmes,cid,justificativa} = _commonFields(dados);
+  const COR = '#007A37';
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8">
+${_cssBase(COR)}
+</head><body>
+<table style="margin-bottom:3px"><tr>
+  <td class="no-border" style="width:60%;padding:2px 0">
+    <div style="font-size:10pt;font-weight:bold;color:${COR}">Unimed Recife</div>
+    <div style="font-size:5.5pt;color:#555">Padrão TISS - Componente de Conteúdo e Estrutura - Maio/2025</div>
+  </td>
+  <td class="no-border" style="width:40%;text-align:right">
+    <div style="font-size:8pt;font-weight:bold">GUIA DE SOLICITAÇÃO DE INTERNAÇÃO</div>
+  </td>
+</tr></table>
+<table style="margin-bottom:1px"><tr>
+  <td colspan="5"><span class="sec">DADOS DO BENEFICIÁRIO</span></td>
+</tr><tr>
+  <td style="width:35%"><span class="lbl">2 - Nome do Beneficiário</span><span class="val">${paciente.nome}</span></td>
+  <td style="width:25%"><span class="lbl">3 - Número da Carteira</span><span class="val">${paciente.carteira}</span></td>
+  <td style="width:15%"><span class="lbl">4 - Validade</span><span class="val">${paciente.validade}</span></td>
+  <td style="width:15%"><span class="lbl">5 - Plano</span><span class="val">${paciente.plano||''}</span></td>
+  <td style="width:10%"><span class="lbl">Atend. RN</span><span class="val"></span></td>
+</tr></table>
+<table style="margin-bottom:1px"><tr>
+  <td colspan="4"><span class="sec">DADOS DO SOLICITANTE</span></td>
+</tr><tr>
+  <td style="width:40%"><span class="lbl">7 - Nome do Contratado Solicitante</span><span class="val">${medico.nome}</span></td>
+  <td style="width:20%"><span class="lbl">8 - Código na Operadora</span><span class="val"></span></td>
+  <td style="width:20%"><span class="lbl">9 - ${medico.conselho}-${medico.uf}</span><span class="val">${medico.numero}</span></td>
+  <td style="width:20%"><span class="lbl">10 - CBO</span><span class="val">${medico.cbo}</span></td>
+</tr></table>
+<table style="margin-bottom:1px"><tr>
+  <td colspan="5"><span class="sec">DADOS DA INTERNAÇÃO</span></td>
+</tr><tr>
+  <td style="width:40%"><span class="lbl">13 - Estabelecimento Solicitado</span><span class="val">${hospital}</span></td>
+  <td style="width:15%"><span class="lbl">14 - Caráter</span><span class="val">${caraterTexto}</span></td>
+  <td style="width:20%"><span class="lbl">15 - Tipo de Internação</span><span class="val">${tipoInternacao}</span></td>
+  <td style="width:15%"><span class="lbl">16 - Regime</span><span class="val">${regimeTexto}</span></td>
+  <td style="width:10%"><span class="lbl">17 - Diárias</span><span class="val">${dados.diarias}</span></td>
+</tr><tr>
+  <td colspan="2"><span class="lbl">18 - CID-10 Principal</span><span class="val">${cid}</span></td>
+  <td colspan="2"><span class="lbl">19 - CID-10 Secundário</span><span class="val"></span></td>
+  <td><span class="lbl">20 - Data Solicitação</span><span class="val">${dataHoje}</span></td>
+</tr><tr>
+  <td colspan="2"><span class="lbl">26 - Previsão OPME</span><span class="val">${opmes.length>0?'Sim':'Não'}</span></td>
+  <td colspan="3"><span class="lbl">Nº Guia</span><span class="val">${nGuia}</span></td>
+</tr></table>
+<table style="margin-bottom:1px"><tr>
+  <td colspan="6"><span class="sec">PROCEDIMENTOS / EXAMES SOLICITADOS</span></td>
+</tr><tr>
+  <td style="width:4%"><span class="lbl">Seq</span></td>
+  <td style="width:6%"><span class="lbl">Tab.</span></td>
+  <td style="width:14%"><span class="lbl">Código</span></td>
+  <td style="width:56%"><span class="lbl">Descrição</span></td>
+  <td style="width:10%"><span class="lbl">Qtd</span></td>
+  <td style="width:10%"><span class="lbl">Via</span></td>
+</tr>
+${_procRows12(todosProcs)}
+</table>
+<table style="margin-bottom:1px"><tr>
+  <td><span class="sec">INDICAÇÃO CLÍNICA</span></td>
+</tr><tr>
+  <td style="min-height:30px"><span class="val">${justificativa}</span></td>
+</tr></table>
+<table><tr>
+  <td style="width:50%"><span class="lbl">Assinatura e Carimbo do Médico</span><span class="sig"></span></td>
+  <td style="width:25%"><span class="lbl">Data</span><span class="val">${dataHoje}</span></td>
+  <td style="width:25%"><span class="lbl">Assinatura do Beneficiário</span><span class="sig"></span></td>
+</tr></table>
+</body></html>`;
+}
+
+// ─── TEMPLATE AMIL ────────────────────────────────────────────────────────────
+function gerarGuiaAmil(dados) {
+  const {paciente,medico,hospital,dataHoje,regimeTexto,caraterTexto,tipoInternacao,todosProcs,nGuia,opmes,cid,justificativa} = _commonFields(dados);
+  const COR = '#0066CC';
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8">
+${_cssBase(COR)}
+</head><body>
+<table style="margin-bottom:3px"><tr>
+  <td class="no-border" style="width:60%;padding:2px 0">
+    <div style="font-size:10pt;font-weight:bold;color:${COR}">Amil</div>
+  </td>
+  <td class="no-border" style="width:40%;text-align:right">
+    <div style="font-size:8pt;font-weight:bold">GUIA DE SOLICITAÇÃO DE INTERNAÇÃO</div>
+  </td>
+</tr></table>
+<table style="margin-bottom:1px"><tr>
+  <td colspan="5"><span class="sec">DADOS DO BENEFICIÁRIO</span></td>
+</tr><tr>
+  <td style="width:35%"><span class="lbl">2 - Nome do Beneficiário</span><span class="val">${paciente.nome}</span></td>
+  <td style="width:25%"><span class="lbl">3 - Número da Carteira</span><span class="val">${paciente.carteira}</span></td>
+  <td style="width:15%"><span class="lbl">4 - Validade</span><span class="val">${paciente.validade}</span></td>
+  <td style="width:15%"><span class="lbl">5 - Plano</span><span class="val">${paciente.plano||''}</span></td>
+  <td style="width:10%"><span class="lbl">6 - CNS</span><span class="val">${paciente.cns||''}</span></td>
+</tr></table>
+<table style="margin-bottom:1px"><tr>
+  <td colspan="4"><span class="sec">DADOS DO SOLICITANTE</span></td>
+</tr><tr>
+  <td style="width:40%"><span class="lbl">7 - Nome do Contratado Solicitante</span><span class="val">${medico.nome}</span></td>
+  <td style="width:20%"><span class="lbl">8 - Código na Operadora</span><span class="val"></span></td>
+  <td style="width:20%"><span class="lbl">9 - ${medico.conselho}-${medico.uf}</span><span class="val">${medico.numero}</span></td>
+  <td style="width:20%"><span class="lbl">10 - CBO</span><span class="val">${medico.cbo}</span></td>
+</tr><tr>
+  <td colspan="2"><span class="lbl">11 - Nome do Profissional</span><span class="val">${medico.nome}</span></td>
+  <td><span class="lbl">Conselho</span><span class="val">${medico.conselho}-${medico.uf} ${medico.numero}</span></td>
+  <td><span class="lbl">RQE</span><span class="val">${medico.rqe}</span></td>
+</tr></table>
+<table style="margin-bottom:1px"><tr>
+  <td colspan="5"><span class="sec">DADOS DA INTERNAÇÃO</span></td>
+</tr><tr>
+  <td style="width:40%"><span class="lbl">13 - Estabelecimento Solicitado</span><span class="val">${hospital}</span></td>
+  <td style="width:15%"><span class="lbl">14 - Caráter</span><span class="val">${caraterTexto}</span></td>
+  <td style="width:20%"><span class="lbl">15 - Tipo de Internação</span><span class="val">${tipoInternacao}</span></td>
+  <td style="width:15%"><span class="lbl">16 - Regime</span><span class="val">${regimeTexto}</span></td>
+  <td style="width:10%"><span class="lbl">17 - Diárias</span><span class="val">${dados.diarias}</span></td>
+</tr><tr>
+  <td colspan="2"><span class="lbl">18 - CID-10 Principal</span><span class="val">${cid}</span></td>
+  <td colspan="2"><span class="lbl">19 - CID-10 Secundário</span><span class="val"></span></td>
+  <td><span class="lbl">20 - Data</span><span class="val">${dataHoje}</span></td>
+</tr><tr>
+  <td colspan="5"><span class="lbl">Nº Guia</span><span class="val">${nGuia}</span></td>
+</tr></table>
+<table style="margin-bottom:1px"><tr>
+  <td colspan="6"><span class="sec">PROCEDIMENTOS / EXAMES SOLICITADOS</span></td>
+</tr><tr>
+  <td style="width:3%"><span class="lbl">Seq</span></td>
+  <td style="width:7%"><span class="lbl">21 - Tab.</span></td>
+  <td style="width:15%"><span class="lbl">22 - Código</span></td>
+  <td style="width:55%"><span class="lbl">23 - Descrição</span></td>
+  <td style="width:10%"><span class="lbl">24 - Qtd</span></td>
+  <td style="width:10%"><span class="lbl">25 - Via</span></td>
+</tr>
+${_procRows(todosProcs,5)}
+</table>
+<table style="margin-bottom:1px"><tr>
+  <td colspan="7"><span class="sec">DADOS DO OPME</span></td>
+</tr><tr>
+  <td style="width:3%"><span class="lbl">Seq</span></td>
+  <td style="width:7%"><span class="lbl">Tab.</span></td>
+  <td style="width:15%"><span class="lbl">Código</span></td>
+  <td style="width:40%"><span class="lbl">38 - Descrição OPME</span></td>
+  <td style="width:10%"><span class="lbl">39 - Qtd</span></td>
+  <td style="width:12%"><span class="lbl">40 - Valor Unit.</span></td>
+  <td style="width:13%"><span class="lbl">41 - Valor Total</span></td>
+</tr>
+${_opmRows(opmes,5)}
+</table>
+<table style="margin-bottom:1px"><tr>
+  <td><span class="sec">JUSTIFICATIVA / INDICAÇÃO CLÍNICA</span></td>
+</tr><tr>
+  <td style="min-height:30px"><span class="val">${justificativa}</span></td>
+</tr></table>
+<table><tr>
+  <td style="width:50%"><span class="lbl">Assinatura e Carimbo do Médico</span><span class="sig"></span></td>
+  <td style="width:25%"><span class="lbl">Data</span><span class="val">${dataHoje}</span></td>
+  <td style="width:25%"><span class="lbl">Assinatura do Beneficiário</span><span class="sig"></span></td>
+</tr></table>
+</body></html>`;
+}
+
+// ─── TEMPLATE CASSI ───────────────────────────────────────────────────────────
+function gerarGuiaCassi(dados) {
+  const {paciente,medico,hospital,dataHoje,regimeTexto,caraterTexto,tipoInternacao,todosProcs,nGuia,opmes,cid,justificativa} = _commonFields(dados);
+  const COR = '#0057A8';
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8">
+${_cssBase(COR)}
+</head><body>
+<table style="margin-bottom:3px"><tr>
+  <td class="no-border" style="width:60%;padding:2px 0">
+    <div style="font-size:8pt;font-weight:bold;color:${COR}">CASSI</div>
+    <div style="font-size:5.5pt;color:#555">Caixa de Assistência dos Funcionários do Banco do Brasil — ANS nº 34665-9</div>
+  </td>
+  <td class="no-border" style="width:40%;text-align:right">
+    <div style="font-size:8pt;font-weight:bold">GUIA DE SOLICITAÇÃO DE INTERNAÇÃO</div>
+  </td>
+</tr></table>
+<table style="margin-bottom:1px"><tr>
+  <td colspan="5"><span class="sec">DADOS DO BENEFICIÁRIO</span></td>
+</tr><tr>
+  <td style="width:35%"><span class="lbl">2 - NOME DO BENEFICIÁRIO</span><span class="val">${paciente.nome}</span></td>
+  <td style="width:25%"><span class="lbl">3 - NÚMERO DA CARTEIRA</span><span class="val">${paciente.carteira}</span></td>
+  <td style="width:15%"><span class="lbl">4 - VALIDADE</span><span class="val">${paciente.validade}</span></td>
+  <td style="width:15%"><span class="lbl">5 - PLANO</span><span class="val">${paciente.plano||''}</span></td>
+  <td style="width:10%"><span class="lbl">6 - CNS</span><span class="val">${paciente.cns||''}</span></td>
+</tr></table>
+<table style="margin-bottom:1px"><tr>
+  <td colspan="4"><span class="sec">DADOS DO SOLICITANTE</span></td>
+</tr><tr>
+  <td style="width:40%"><span class="lbl">7 - NOME DO CONTRATADO SOLICITANTE</span><span class="val">${medico.nome}</span></td>
+  <td style="width:20%"><span class="lbl">8 - CÓDIGO NA OPERADORA</span><span class="val"></span></td>
+  <td style="width:20%"><span class="lbl">9 - ${medico.conselho}-${medico.uf}</span><span class="val">${medico.numero}</span></td>
+  <td style="width:20%"><span class="lbl">10 - CBO</span><span class="val">${medico.cbo}</span></td>
+</tr><tr>
+  <td colspan="2"><span class="lbl">11 - NOME DO PROFISSIONAL</span><span class="val">${medico.nome}</span></td>
+  <td><span class="lbl">CONSELHO</span><span class="val">${medico.conselho}-${medico.uf} ${medico.numero}</span></td>
+  <td><span class="lbl">RQE</span><span class="val">${medico.rqe}</span></td>
+</tr></table>
+<table style="margin-bottom:1px"><tr>
+  <td colspan="5"><span class="sec">DADOS DA INTERNAÇÃO</span></td>
+</tr><tr>
+  <td style="width:40%"><span class="lbl">13 - ESTABELECIMENTO SOLICITADO</span><span class="val">${hospital}</span></td>
+  <td style="width:15%"><span class="lbl">14 - CARÁTER</span><span class="val">${caraterTexto}</span></td>
+  <td style="width:20%"><span class="lbl">15 - TIPO DE INTERNAÇÃO</span><span class="val">${tipoInternacao}</span></td>
+  <td style="width:15%"><span class="lbl">16 - REGIME</span><span class="val">${regimeTexto}</span></td>
+  <td style="width:10%"><span class="lbl">17 - DIÁRIAS</span><span class="val">${dados.diarias}</span></td>
+</tr><tr>
+  <td colspan="2"><span class="lbl">18 - CID-10 PRINCIPAL</span><span class="val">${cid}</span></td>
+  <td colspan="2"><span class="lbl">19 - CID-10 SECUNDÁRIO</span><span class="val"></span></td>
+  <td><span class="lbl">20 - DATA SOLICITAÇÃO</span><span class="val">${dataHoje}</span></td>
+</tr><tr>
+  <td colspan="5"><span class="lbl">Nº GUIA</span><span class="val">${nGuia}</span></td>
+</tr></table>
+<table style="margin-bottom:1px"><tr>
+  <td colspan="6"><span class="sec">PROCEDIMENTOS / EXAMES SOLICITADOS</span></td>
+</tr><tr>
+  <td style="width:3%"><span class="lbl">SEQ</span></td>
+  <td style="width:7%"><span class="lbl">21 - TAB.</span></td>
+  <td style="width:15%"><span class="lbl">22 - CÓDIGO</span></td>
+  <td style="width:55%"><span class="lbl">23 - DESCRIÇÃO</span></td>
+  <td style="width:10%"><span class="lbl">24 - QTD</span></td>
+  <td style="width:10%"><span class="lbl">25 - VIA</span></td>
+</tr>
+${_procRows(todosProcs,5)}
+</table>
+<table style="margin-bottom:1px"><tr>
+  <td colspan="7"><span class="sec">DADOS DO OPME</span></td>
+</tr><tr>
+  <td style="width:3%"><span class="lbl">SEQ</span></td>
+  <td style="width:7%"><span class="lbl">TAB.</span></td>
+  <td style="width:15%"><span class="lbl">CÓDIGO</span></td>
+  <td style="width:40%"><span class="lbl">38 - DESCRIÇÃO OPME</span></td>
+  <td style="width:10%"><span class="lbl">39 - QTD</span></td>
+  <td style="width:12%"><span class="lbl">40 - VALOR UNIT.</span></td>
+  <td style="width:13%"><span class="lbl">41 - VALOR TOTAL</span></td>
+</tr>
+${_opmRows(opmes,5)}
+</table>
+<table style="margin-bottom:1px"><tr>
+  <td><span class="sec">JUSTIFICATIVA / INDICAÇÃO CLÍNICA</span></td>
+</tr><tr>
+  <td style="min-height:30px"><span class="val">${justificativa}</span></td>
+</tr></table>
+<table><tr>
+  <td style="width:50%"><span class="lbl">ASSINATURA E CARIMBO DO MÉDICO</span><span class="sig"></span></td>
+  <td style="width:25%"><span class="lbl">DATA</span><span class="val">${dataHoje}</span></td>
+  <td style="width:25%"><span class="lbl">ASSINATURA DO BENEFICIÁRIO</span><span class="sig"></span></td>
+</tr></table>
+</body></html>`;
+}
+
+// ─── TEMPLATE CAMED ───────────────────────────────────────────────────────────
+function gerarGuiaCamed(dados) {
+  const {paciente,medico,hospital,dataHoje,regimeTexto,caraterTexto,tipoInternacao,todosProcs,nGuia,opmes,cid,justificativa} = _commonFields(dados);
+  const COR = '#004080';
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8">
+${_cssBase(COR)}
+</head><body>
+<table style="margin-bottom:3px"><tr>
+  <td class="no-border" style="width:60%;padding:2px 0">
+    <div style="font-size:9pt;font-weight:bold;color:${COR}">Camed</div>
+    <div style="font-size:5.5pt;color:#555">ANS nº 38569-7 — "Quem tem vive melhor" — VERSÃO TISS-3.02.00</div>
+  </td>
+  <td class="no-border" style="width:40%;text-align:right">
+    <div style="font-size:8pt;font-weight:bold">GUIA DE SOLICITAÇÃO DE INTERNAÇÃO</div>
+  </td>
+</tr></table>
+<table style="margin-bottom:1px"><tr>
+  <td colspan="5"><span class="sec">DADOS DO BENEFICIÁRIO</span></td>
+</tr><tr>
+  <td style="width:35%"><span class="lbl">2 - Nome do Beneficiário</span><span class="val">${paciente.nome}</span></td>
+  <td style="width:25%"><span class="lbl">3 - Número da Carteira</span><span class="val">${paciente.carteira}</span></td>
+  <td style="width:15%"><span class="lbl">4 - Validade</span><span class="val">${paciente.validade}</span></td>
+  <td style="width:15%"><span class="lbl">5 - Plano</span><span class="val">${paciente.plano||''}</span></td>
+  <td style="width:10%"><span class="lbl">6 - CNS</span><span class="val">${paciente.cns||''}</span></td>
+</tr></table>
+<table style="margin-bottom:1px"><tr>
+  <td colspan="4"><span class="sec">DADOS DO SOLICITANTE</span></td>
+</tr><tr>
+  <td style="width:40%"><span class="lbl">7 - Nome do Contratado Solicitante</span><span class="val">${medico.nome}</span></td>
+  <td style="width:20%"><span class="lbl">8 - Código na Operadora</span><span class="val"></span></td>
+  <td style="width:20%"><span class="lbl">9 - ${medico.conselho}-${medico.uf}</span><span class="val">${medico.numero}</span></td>
+  <td style="width:20%"><span class="lbl">10 - CBO</span><span class="val">${medico.cbo}</span></td>
+</tr></table>
+<table style="margin-bottom:1px"><tr>
+  <td colspan="5"><span class="sec">DADOS DA INTERNAÇÃO</span></td>
+</tr><tr>
+  <td style="width:40%"><span class="lbl">13 - Estabelecimento Solicitado</span><span class="val">${hospital}</span></td>
+  <td style="width:15%"><span class="lbl">14 - Caráter</span><span class="val">${caraterTexto}</span></td>
+  <td style="width:20%"><span class="lbl">15 - Tipo de Internação</span><span class="val">${tipoInternacao}</span></td>
+  <td style="width:15%"><span class="lbl">16 - Regime</span><span class="val">${regimeTexto}</span></td>
+  <td style="width:10%"><span class="lbl">17 - Diárias</span><span class="val">${dados.diarias}</span></td>
+</tr><tr>
+  <td colspan="2"><span class="lbl">18 - CID-10 Principal</span><span class="val">${cid}</span></td>
+  <td colspan="2"><span class="lbl">19 - CID-10 Secundário</span><span class="val"></span></td>
+  <td><span class="lbl">20 - Data Solicitação</span><span class="val">${dataHoje}</span></td>
+</tr><tr>
+  <td colspan="2"><span class="lbl">26 - Previsão de uso de OPME</span><span class="val">${opmes.length>0?'Sim':'Não'}</span></td>
+  <td colspan="2"><span class="lbl">27 - Previsão de uso de Quimioterápico</span><span class="val">Não</span></td>
+  <td><span class="lbl">Nº Guia</span><span class="val">${nGuia}</span></td>
+</tr></table>
+<table style="margin-bottom:1px"><tr>
+  <td colspan="6"><span class="sec">PROCEDIMENTOS / EXAMES SOLICITADOS</span></td>
+</tr><tr>
+  <td style="width:4%"><span class="lbl">Seq</span></td>
+  <td style="width:6%"><span class="lbl">Tab.</span></td>
+  <td style="width:14%"><span class="lbl">Código</span></td>
+  <td style="width:56%"><span class="lbl">Descrição</span></td>
+  <td style="width:10%"><span class="lbl">Qtd</span></td>
+  <td style="width:10%"><span class="lbl">Via</span></td>
+</tr>
+${_procRows12(todosProcs)}
+</table>
+<table style="margin-bottom:1px"><tr>
+  <td><span class="sec">INDICAÇÃO CLÍNICA</span></td>
+</tr><tr>
+  <td style="min-height:30px"><span class="val">${justificativa}</span></td>
+</tr></table>
+<table><tr>
+  <td style="width:50%"><span class="lbl">Assinatura e Carimbo do Médico</span><span class="sig"></span></td>
+  <td style="width:25%"><span class="lbl">Data</span><span class="val">${dataHoje}</span></td>
+  <td style="width:25%"><span class="lbl">Assinatura do Beneficiário</span><span class="sig"></span></td>
+</tr></table>
+</body></html>`;
+}
+
+// ─── TEMPLATE SAÚDE PETROBRAS ─────────────────────────────────────────────────
+function gerarGuiaPetrobras(dados) {
+  const {paciente,medico,hospital,dataHoje,regimeTexto,caraterTexto,tipoInternacao,todosProcs,nGuia,opmes,cid,justificativa} = _commonFields(dados);
+  const COR = '#006633';
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8">
+${_cssBase(COR)}
+</head><body>
+<table style="margin-bottom:3px"><tr>
+  <td class="no-border" style="width:60%;padding:2px 0">
+    <div style="font-size:9pt;font-weight:bold;color:${COR}">Saúde Petrobras</div>
+    <div style="font-size:5.5pt;color:#555">ANS nº 42263-1 — 1ª VIA SAÚDE PETROBRAS</div>
+  </td>
+  <td class="no-border" style="width:40%;text-align:right">
+    <div style="font-size:8pt;font-weight:bold">GUIA DE SOLICITAÇÃO DE INTERNAÇÃO</div>
+  </td>
+</tr></table>
+<table style="margin-bottom:1px"><tr>
+  <td colspan="5"><span class="sec">DADOS DO BENEFICIÁRIO</span></td>
+</tr><tr>
+  <td style="width:35%"><span class="lbl">2 - Nome do Beneficiário</span><span class="val">${paciente.nome}</span></td>
+  <td style="width:25%"><span class="lbl">3 - Número da Carteira</span><span class="val">${paciente.carteira}</span></td>
+  <td style="width:15%"><span class="lbl">4 - Validade</span><span class="val">${paciente.validade}</span></td>
+  <td style="width:15%"><span class="lbl">5 - Plano</span><span class="val">${paciente.plano||''}</span></td>
+  <td style="width:10%"><span class="lbl">6 - CNS</span><span class="val">${paciente.cns||''}</span></td>
+</tr></table>
+<table style="margin-bottom:1px"><tr>
+  <td colspan="4"><span class="sec">DADOS DO SOLICITANTE</span></td>
+</tr><tr>
+  <td style="width:40%"><span class="lbl">7 - Nome do Contratado Solicitante</span><span class="val">${medico.nome}</span></td>
+  <td style="width:20%"><span class="lbl">8 - Código na Operadora</span><span class="val"></span></td>
+  <td style="width:20%"><span class="lbl">9 - ${medico.conselho}-${medico.uf}</span><span class="val">${medico.numero}</span></td>
+  <td style="width:20%"><span class="lbl">10 - CBO</span><span class="val">${medico.cbo}</span></td>
+</tr></table>
+<table style="margin-bottom:1px"><tr>
+  <td colspan="5"><span class="sec">DADOS DA INTERNAÇÃO</span></td>
+</tr><tr>
+  <td style="width:40%"><span class="lbl">13 - Estabelecimento Solicitado</span><span class="val">${hospital}</span></td>
+  <td style="width:15%"><span class="lbl">14 - Caráter</span><span class="val">${caraterTexto}</span></td>
+  <td style="width:20%"><span class="lbl">15 - Tipo de Internação</span><span class="val">${tipoInternacao}</span></td>
+  <td style="width:15%"><span class="lbl">16 - Regime</span><span class="val">${regimeTexto}</span></td>
+  <td style="width:10%"><span class="lbl">17 - Diárias</span><span class="val">${dados.diarias}</span></td>
+</tr><tr>
+  <td colspan="2"><span class="lbl">18 - CID-10 Principal</span><span class="val">${cid}</span></td>
+  <td colspan="2"><span class="lbl">19 - CID-10 Secundário</span><span class="val"></span></td>
+  <td><span class="lbl">20 - Data Solicitação</span><span class="val">${dataHoje}</span></td>
+</tr><tr>
+  <td colspan="2"><span class="lbl">26 - Previsão de uso de OPME</span><span class="val">${opmes.length>0?'Sim':'Não'}</span></td>
+  <td colspan="2"><span class="lbl">27 - Previsão de uso de Quimioterápico</span><span class="val">Não</span></td>
+  <td><span class="lbl">Nº Guia</span><span class="val">${nGuia}</span></td>
+</tr></table>
+<table style="margin-bottom:1px"><tr>
+  <td colspan="6"><span class="sec">PROCEDIMENTOS / EXAMES SOLICITADOS</span></td>
+</tr><tr>
+  <td style="width:4%"><span class="lbl">Seq</span></td>
+  <td style="width:6%"><span class="lbl">Tab.</span></td>
+  <td style="width:14%"><span class="lbl">Código</span></td>
+  <td style="width:56%"><span class="lbl">Descrição</span></td>
+  <td style="width:10%"><span class="lbl">Qtd</span></td>
+  <td style="width:10%"><span class="lbl">Via</span></td>
+</tr>
+${_procRows12(todosProcs)}
+</table>
+<table style="margin-bottom:1px"><tr>
+  <td><span class="sec">INDICAÇÃO CLÍNICA</span></td>
+</tr><tr>
+  <td style="min-height:30px"><span class="val">${justificativa}</span></td>
+</tr></table>
+<table><tr>
+  <td style="width:50%"><span class="lbl">Assinatura e Carimbo do Médico</span><span class="sig"></span></td>
+  <td style="width:25%"><span class="lbl">Data</span><span class="val">${dataHoje}</span></td>
+  <td style="width:25%"><span class="lbl">Assinatura do Beneficiário</span><span class="sig"></span></td>
+</tr></table>
+</body></html>`;
+}
+
 // ─── GERADOR DE PDF / GUIA ────────────────────────────────────────────────────
 async function gerarPDF(dados) {
   const { convenio, paciente, medico, procPrincipal, procsSecundarios, justificativa, opmes, carater, regime, diarias, cid } = dados;
 
-  // Bradesco usa template estático fiel ao formulário TISS oficial
-  if (convenio === "Bradesco Saúde") {
-    return gerarGuiaBradesco(dados);
-  }
+  // Templates estáticos por convênio
+  if (convenio === "Bradesco Saúde") return gerarGuiaBradesco(dados);
+  if (convenio === "SulAmérica") return gerarGuiaSulAmerica(dados);
+  if (convenio === "Unimed Recife") return gerarGuiaUnimed(dados);
+  if (convenio === "Amil") return gerarGuiaAmil(dados);
+  if (convenio === "CASSI") return gerarGuiaCassi(dados);
+  if (convenio === "Camed") return gerarGuiaCamed(dados);
+  if (convenio === "Saúde Petrobras") return gerarGuiaPetrobras(dados);
 
   const hospital = paciente.hospital === "__outro__" ? (paciente.hospitalCustom||"") : paciente.hospital;
   const todosProcs = [procPrincipal, ...procsSecundarios].filter(Boolean);
