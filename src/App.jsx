@@ -1948,7 +1948,6 @@ function ApiKeySetup({ onSave }) {
 export default function App() {
   const [apiKey] = useState(() => localStorage.getItem("anthropic_key") || "");
   const [showSetup, setShowSetup] = useState(!apiKey);
-  const [step,setStep]=useState(1);
   const [convenio,setConvenio]=useState("");
   const [showCamera,setShowCamera]=useState(false);
   const [pdfHtml,setPdfHtml]=useState(null);
@@ -2003,7 +2002,7 @@ export default function App() {
   };
 
   const reset=()=>{
-    setStep(1);setConvenio("");setPdfHtml(null);
+    setConvenio("");setPdfHtml(null);
     setPaciente({nome:"",carteira:"",validade:"",plano:"",cns:"",cid:"",hospital:""});
     setProcPrincipal(null);setProcsSecundarios([]);setJustificativa("");setOpmes([]);
     setCarater("E");setRegime("1");setDiarias("1");setTcleHtml(null);setGerarComTCLE(true);
@@ -2020,327 +2019,220 @@ export default function App() {
     "Saúde Petrobras":{icon:"⛽",sel:"border-green-600 bg-green-50 ring-2 ring-green-300",unsel:"border-gray-200 hover:border-green-500 hover:bg-green-50",bar:"bg-green-800",badge:"bg-green-100 text-green-800 border-green-400"},
   };
   const cm=cvMeta[convenio]||{};
-  const steps=["Convênio","Paciente","Procedimento","Justificativa","Revisão"];
 
   if (showSetup) return <ApiKeySetup onSave={() => setShowSetup(false)} />;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-100 to-blue-50 py-8 px-4">
-      <div className="max-w-lg mx-auto">
+    <div className="min-h-screen bg-slate-100 py-5 px-4">
+      <div className="max-w-lg mx-auto space-y-4">
 
         {/* Header */}
-        <div className="text-center mb-6">
-          <div className="inline-flex items-center gap-2 bg-white rounded-full px-4 py-2 shadow-sm border border-gray-100 mb-3">
+        <div className="flex items-center justify-between px-1">
+          <div className="flex items-center gap-2">
             <span className="text-xl">🏥</span>
             <span className="font-bold text-gray-800 text-sm">GuiaFácil</span>
-            <span className="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full ml-1 font-medium">v2.0</span>
+            <span className="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full font-medium">v2.0</span>
           </div>
-          <h1 className="text-2xl font-extrabold text-gray-900">Guias de Internação</h1>
-          <p className="text-gray-400 text-sm mt-1">Preencha em minutos, gere o PDF na hora</p>
+          <p className="text-xs text-gray-400">{MEDICO.nome.split(" ").slice(0,2).join(" ")} · {MEDICO.especialidade}</p>
         </div>
 
-        {/* Progress */}
-        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 mb-5">
-          <div className="flex items-start justify-between mb-3">
-            {steps.map((s,i)=>{
-              const n=i+1;const done=step>n;const active=step===n;
-              return (
-                <div key={s} className="flex flex-col items-center gap-1 flex-1">
-                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all ${done?"bg-green-500 text-white":active?"bg-blue-600 text-white ring-4 ring-blue-100":"bg-gray-100 text-gray-400"}`}>
-                    {done?"✓":n}
-                  </div>
-                  <span className={`text-xs hidden sm:block text-center leading-tight ${active?"text-blue-600 font-semibold":"text-gray-400"}`}>{s}</span>
-                </div>
-              );
-            })}
+        {/* Convênio */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+          <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Convênio *</label>
+          <select className="w-full mt-2 border border-gray-200 rounded-xl px-3 py-3 text-sm font-medium bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800"
+            value={convenio} onChange={e=>{setConvenio(e.target.value);setPaciente(p=>({...p,hospital:getHospitais(e.target.value)[0]}));}}>
+            <option value="">Selecione o convênio...</option>
+            {CONVENIOS.map(c=><option key={c} value={c}>{c}</option>)}
+          </select>
+        </div>
+
+        {/* Paciente */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="font-bold text-gray-800 text-sm">Paciente</h2>
+            <button onClick={()=>setShowCamera(true)}
+              className="flex items-center gap-1.5 text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition">
+              <span>📷</span> Scan carteirinha
+            </button>
           </div>
-          <div className="w-full bg-gray-100 rounded-full h-1.5">
-            <div className="bg-blue-600 h-1.5 rounded-full transition-all duration-500" style={{width:`${((step-1)/4)*100}%`}}/>
+          <Field label="Nome completo *" value={paciente.nome} onChange={e=>setPaciente(p=>({...p,nome:e.target.value}))} placeholder="Nome do paciente"/>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Carteirinha" value={paciente.carteira} onChange={e=>setPaciente(p=>({...p,carteira:e.target.value}))} placeholder="0000000000"/>
+            <Field label="Validade" value={paciente.validade} onChange={e=>setPaciente(p=>({...p,validade:e.target.value}))} placeholder="MM/AAAA"/>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Plano" value={paciente.plano} onChange={e=>setPaciente(p=>({...p,plano:e.target.value}))} placeholder="Nacional Flex"/>
+            <Field label="CNS" value={paciente.cns} onChange={e=>setPaciente(p=>({...p,cns:e.target.value}))} placeholder="000 0000 0000 0000"/>
           </div>
         </div>
 
-        {/* Content */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+        {/* Procedimento */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 space-y-4">
+          <h2 className="font-bold text-gray-800 text-sm">Procedimento</h2>
 
-          {/* STEP 1 — Convênio */}
-          {step===1&&(
-            <div className="space-y-5">
-              <div className="text-center">
-                <h2 className="text-xl font-bold text-gray-900">Selecione o Convênio</h2>
-                <p className="text-gray-400 text-sm mt-1">A guia será formatada para o modelo do plano</p>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                {CONVENIOS.map(cv=>{
-                  const m=cvMeta[cv];const active=convenio===cv;
-                  return (
-                    <button key={cv} onClick={()=>{setConvenio(cv);setPaciente(p=>({...p,hospital:getHospitais(cv)[0]}));}}
-                      className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition text-center ${active?m.sel:m.unsel}`}>
-                      <span className="text-3xl">{m.icon}</span>
-                      <p className={`font-bold text-xs leading-tight ${active?"text-gray-900":"text-gray-700"}`}>{cv}</p>
-                      {active&&<span className="text-sm">✅</span>}
-                    </button>
-                  );
-                })}
-              </div>
-              {convenio&&(
-                <div className={`flex items-center gap-3 p-3 rounded-xl border-2 ${cm.sel||""}`}>
-                  <span className="text-2xl">{cm.icon}</span>
-                  <div><p className="font-bold text-gray-900 text-sm">{convenio}</p><p className="text-xs text-gray-500">Guia de Solicitação de Internação</p></div>
-                  <span className="ml-auto text-lg">✅</span>
-                </div>
-              )}
-              <button disabled={!convenio} onClick={()=>setStep(2)} className="w-full py-3 bg-blue-600 text-white font-bold rounded-xl disabled:opacity-30 hover:bg-blue-700 transition text-sm">Continuar →</button>
+          {/* Principal */}
+          <div>
+            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Principal *</label>
+            <div className="mt-2">
+              <TUSSSearch onSelect={selectPrincipal} placeholder="Buscar por nome ou código TUSS..."/>
             </div>
-          )}
-
-          {/* STEP 2 — Paciente */}
-          {step===2&&(
-            <div className="space-y-5">
-              <div><h2 className="text-xl font-bold text-gray-900">Dados do Paciente</h2><p className="text-gray-400 text-xs mt-1">Convênio: <strong className="text-gray-600">{convenio}</strong></p></div>
-              <button onClick={()=>setShowCamera(true)} className="w-full flex items-center gap-4 p-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl shadow-lg hover:from-blue-700 hover:to-indigo-700 transition group">
-                <div className="w-14 h-14 bg-white/20 rounded-xl flex items-center justify-center text-3xl shrink-0 group-hover:scale-110 transition-transform">📷</div>
-                <div className="text-left flex-1">
-                  <p className="font-bold">Fotografar Carteirinha</p>
-                  <p className="text-xs text-blue-100 mt-0.5">A IA lê e preenche os dados automaticamente</p>
-                  {paciente.nome&&<p className="text-xs text-green-300 mt-1">✓ {paciente.nome}</p>}
+            {procPrincipal?(
+              <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-xl p-3 mt-2">
+                <span className="font-mono text-xs bg-red-600 text-white px-2 py-1 rounded-lg shrink-0">{procPrincipal.codigo}</span>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-gray-800">{procPrincipal.nome}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">Tab. {procPrincipal.tabela}</p>
                 </div>
-                <span className="text-2xl opacity-60 group-hover:translate-x-1 transition-transform">→</span>
-              </button>
-              {paciente.nome&&(
-                <div className="bg-green-50 border border-green-200 rounded-xl p-3 flex items-center gap-3">
-                  <span className="text-2xl">✅</span>
-                  <div><p className="text-sm font-bold text-green-800">Carteira lida</p><p className="text-xs text-green-600">{paciente.nome} · {paciente.carteira||"sem nº"}</p></div>
-                  <button onClick={()=>setShowCamera(true)} className="ml-auto text-xs text-green-600 underline">Reler</button>
-                </div>
-              )}
-              <div className="flex items-center gap-3"><div className="flex-1 h-px bg-gray-200"></div><span className="text-xs text-gray-400">ou preencha manualmente</span><div className="flex-1 h-px bg-gray-200"></div></div>
-              <SectionCard title="Beneficiário" icon="👤" accent="blue">
-                <Field label="Nome completo *" value={paciente.nome} onChange={e=>setPaciente(p=>({...p,nome:e.target.value}))} placeholder="Nome do paciente"/>
-                <div className="grid grid-cols-2 gap-3">
-                  <Field label="Número da Carteira" value={paciente.carteira} onChange={e=>setPaciente(p=>({...p,carteira:e.target.value}))} placeholder="0000000000"/>
-                  <Field label="Validade" value={paciente.validade} onChange={e=>setPaciente(p=>({...p,validade:e.target.value}))} placeholder="MM/AAAA"/>
-                </div>
-                <Field label="Plano" value={paciente.plano} onChange={e=>setPaciente(p=>({...p,plano:e.target.value}))} placeholder="Ex: Nacional Flex"/>
-                <Field label="CNS" value={paciente.cns} onChange={e=>setPaciente(p=>({...p,cns:e.target.value}))} placeholder="000 0000 0000 0000"/>
-              </SectionCard>
-              <SectionCard title="Local e Internação" icon="🏨" accent="green">
-                <div>
-                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Hospital / Local Solicitado</label>
-                  <select className="w-full mt-1 bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    value={paciente.hospital||getHospitais(convenio)[0]} onChange={e=>setPaciente(p=>({...p,hospital:e.target.value}))}>
-                    {getHospitais(convenio).map(h=><option key={h}>{h}</option>)}
-                    <option value="__outro__">Outro...</option>
-                  </select>
-                </div>
-                {paciente.hospital==="__outro__"&&<Field label="Nome do Hospital" value={paciente.hospitalCustom||""} onChange={e=>setPaciente(p=>({...p,hospitalCustom:e.target.value}))} placeholder="Digite o nome"/>}
-                <div className="grid grid-cols-3 gap-3">
-                  <div><label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Caráter</label>
-                    <select className="w-full mt-1 bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" value={carater} onChange={e=>setCarater(e.target.value)}>
-                      <option value="E">Eletivo</option><option value="U">Urgência</option>
-                    </select></div>
-                  <div><label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Regime</label>
-                    <select className="w-full mt-1 bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" value={regime} onChange={e=>setRegime(e.target.value)}>
-                      <option value="1">Hospitalar</option><option value="2">Hospital-dia</option><option value="3">Domiciliar</option>
-                    </select></div>
-                  <Field label="Diárias" value={diarias} onChange={e=>setDiarias(e.target.value)} placeholder="1"/>
-                </div>
-              </SectionCard>
-              <SectionCard title="Médico Solicitante" icon="🩺" accent="purple">
-                <div className="bg-purple-50 rounded-xl p-3 border border-purple-100">
-                  <p className="font-bold text-gray-800">{MEDICO.nome}</p>
-                  <p className="text-xs text-gray-500 mt-1">{MEDICO.conselho} {MEDICO.numero}-{MEDICO.uf} · RQE {MEDICO.rqe} · {MEDICO.especialidade}</p>
-                </div>
-              </SectionCard>
-              <div className="flex gap-3">
-                <button onClick={()=>setStep(1)} className="flex-1 py-3 border border-gray-200 text-gray-600 rounded-xl text-sm font-medium hover:bg-gray-50">← Voltar</button>
-                <button disabled={!paciente.nome} onClick={()=>setStep(3)} className="flex-grow py-3 bg-blue-600 text-white font-bold rounded-xl disabled:opacity-30 hover:bg-blue-700 text-sm">Continuar →</button>
+                <button onClick={()=>setProcPrincipal(null)} className="text-red-400 hover:text-red-600 text-2xl leading-none shrink-0">×</button>
               </div>
+            ):(
+              <p className="text-center text-xs text-gray-400 py-3 border-2 border-dashed border-gray-200 rounded-xl mt-2">Nenhum selecionado</p>
+            )}
+          </div>
+
+          {/* CID + Caráter */}
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="CID-10" value={paciente.cid} onChange={e=>{
+              const newCid=e.target.value;
+              setPaciente(p=>({...p,cid:newCid}));
+              const templates=getJustificativas(procPrincipal?.codigo,newCid);
+              if(!justificativa||justificativa===getJustificativas(procPrincipal?.codigo,paciente.cid)[0]){
+                setJustificativa(templates[0]||"");
+              }
+            }} placeholder="Ex: Z30.2"/>
+            <div>
+              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Caráter</label>
+              <select className="w-full mt-1 bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={carater} onChange={e=>setCarater(e.target.value)}>
+                <option value="E">Eletivo</option>
+                <option value="U">Urgência/Emergência</option>
+              </select>
             </div>
-          )}
+          </div>
 
-          {/* STEP 3 — Procedimentos */}
-          {step===3&&(
-            <div className="space-y-5">
-              <div><h2 className="text-xl font-bold text-gray-900">Procedimentos</h2><p className="text-gray-400 text-xs mt-1">Busque por nome ou código TUSS</p></div>
-              <SectionCard title="Procedimento Principal" icon="⚕️" accent="red">
-                <TUSSSearch onSelect={selectPrincipal} placeholder="Ex: vasectomia, 31205070..."/>
-                {procPrincipal?(
-                  <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-xl p-3 mt-2">
-                    <span className="font-mono text-xs bg-red-600 text-white px-2 py-1 rounded-lg shrink-0">{procPrincipal.codigo}</span>
-                    <div className="flex-1"><p className="text-sm font-semibold text-gray-800">{procPrincipal.nome}</p><p className="text-xs text-gray-400 mt-0.5">Tab. {procPrincipal.tabela} · CID: <strong>{getCID(procPrincipal.codigo)}</strong></p></div>
-                    <button onClick={()=>setProcPrincipal(null)} className="text-red-400 hover:text-red-600 text-2xl leading-none shrink-0">×</button>
-                  </div>
-                ):<p className="text-center text-sm text-gray-400 py-4 border-2 border-dashed border-gray-200 rounded-xl">Nenhum procedimento selecionado</p>}
-              </SectionCard>
-              <SectionCard title="Procedimentos Secundários" icon="➕" accent="orange">
-                <TUSSSearch onSelect={item=>{if(!procsSecundarios.find(p=>p.codigo===item.codigo))setProcsSecundarios(ps=>[...ps,item]);}} placeholder="Adicionar procedimento secundário..."/>
-                {procsSecundarios.length===0?<p className="text-xs text-gray-400 text-center py-2">Nenhum adicionado</p>:
-                  <div className="space-y-2 mt-2">{procsSecundarios.map((p,i)=>(
-                    <div key={p.codigo} className="flex items-center gap-2 bg-orange-50 border border-orange-200 rounded-xl px-3 py-2">
-                      <span className="font-mono text-xs bg-orange-500 text-white px-2 py-0.5 rounded-lg">{p.codigo}</span>
-                      <span className="text-sm text-gray-700 flex-1 truncate">{p.nome}</span>
-                      <button onClick={()=>setProcsSecundarios(ps=>ps.filter((_,j)=>j!==i))} className="text-orange-400 hover:text-red-500 text-xl leading-none">×</button>
-                    </div>
-                  ))}</div>}
-              </SectionCard>
-              {opmes.length>0&&(
-                <SectionCard title="OPMEs Sugeridas" icon="🔧" accent="purple">
-                  <div className="space-y-2">{opmes.map((o,i)=>(
-                    <div key={i} className="flex items-center gap-2 bg-purple-50 border border-purple-200 rounded-xl px-3 py-2">
-                      <span className="text-sm text-gray-700 flex-1">{o.descricao}</span>
-                      <span className="text-xs text-gray-400 mr-2 shrink-0">{o.quantidade}</span>
-                      <button onClick={()=>setOpmes(os=>os.filter((_,j)=>j!==i))} className="text-purple-400 hover:text-red-500 text-xl leading-none">×</button>
-                    </div>
-                  ))}</div>
-                  <p className="text-xs text-gray-400">Sugeridas com base no procedimento. Remova as que não se aplicam.</p>
-                </SectionCard>
-              )}
-              <div className="flex gap-3">
-                <button onClick={()=>setStep(2)} className="flex-1 py-3 border border-gray-200 text-gray-600 rounded-xl text-sm font-medium hover:bg-gray-50">← Voltar</button>
-                <button disabled={!procPrincipal} onClick={()=>setStep(4)} className="flex-grow py-3 bg-blue-600 text-white font-bold rounded-xl disabled:opacity-30 hover:bg-blue-700 text-sm">Continuar →</button>
-              </div>
+          {/* Secundários */}
+          <div>
+            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Procedimentos Secundários</label>
+            <div className="mt-2">
+              <TUSSSearch onSelect={item=>{if(!procsSecundarios.find(p=>p.codigo===item.codigo))setProcsSecundarios(ps=>[...ps,item]);}} placeholder="Adicionar procedimento secundário..."/>
             </div>
-          )}
-
-          {/* STEP 4 — Justificativa */}
-          {step===4&&(
-            <div className="space-y-5">
-              <div><h2 className="text-xl font-bold text-gray-900">Justificativa Clínica</h2></div>
-              <SectionCard title="CID-10 Principal" icon="🏷️" accent="blue">
-                <Field label="CID-10" value={paciente.cid} onChange={e=>{
-                  const newCid=e.target.value;
-                  setPaciente(p=>({...p,cid:newCid}));
-                  // ao trocar CID, atualiza justificativas disponíveis e pré-seleciona
-                  const templates=getJustificativas(procPrincipal?.codigo,newCid);
-                  if(!justificativa||justificativa===getJustificativas(procPrincipal?.codigo,paciente.cid)[0]){
-                    setJustificativa(templates[0]);
-                  }
-                }} placeholder="Ex: Z30.2"/>
-              </SectionCard>
-              <SectionCard title="Modelos Pré-definidos" icon="📝" accent="green">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Por procedimento e CID</span>
-                  <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">{getJustificativas(procPrincipal?.codigo,paciente.cid).length} modelo(s)</span>
-                </div>
-                <div className="space-y-2">
-                  {getJustificativas(procPrincipal?.codigo,paciente.cid).map((t,i)=>(
-                    <button key={i} onClick={()=>setJustificativa(t)}
-                      className={`w-full text-left text-xs p-3 rounded-xl border-2 transition ${justificativa===t?"border-green-500 bg-green-50 text-green-800":"border-gray-200 bg-gray-50 text-gray-600 hover:bg-green-50 hover:border-green-300"}`}>
-                      {t.length>160?t.slice(0,160)+"...":t}
-                    </button>
-                  ))}
-                </div>
-              </SectionCard>
-              <SectionCard title="Texto Final" icon="✏️" accent="orange">
-                <Field label="Justificativa clínica completa" value={justificativa} onChange={e=>setJustificativa(e.target.value)} multiline placeholder="Digite ou edite a justificativa..."/>
-              </SectionCard>
-              <div className="flex gap-3">
-                <button onClick={()=>setStep(3)} className="flex-1 py-3 border border-gray-200 text-gray-600 rounded-xl text-sm font-medium hover:bg-gray-50">← Voltar</button>
-                <button onClick={()=>setStep(5)} className="flex-grow py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 text-sm">Revisar →</button>
+            {procsSecundarios.length>0&&(
+              <div className="space-y-2 mt-2">
+                {procsSecundarios.map((p,i)=>(
+                  <div key={p.codigo} className="flex items-center gap-2 bg-orange-50 border border-orange-200 rounded-xl px-3 py-2">
+                    <span className="font-mono text-xs bg-orange-500 text-white px-2 py-0.5 rounded-lg">{p.codigo}</span>
+                    <span className="text-sm text-gray-700 flex-1 truncate">{p.nome}</span>
+                    <button onClick={()=>setProcsSecundarios(ps=>ps.filter((_,j)=>j!==i))} className="text-orange-400 hover:text-red-500 text-xl leading-none">×</button>
+                  </div>
+                ))}
               </div>
-            </div>
-          )}
-
-          {/* STEP 5 — Revisão + Gerar PDF */}
-          {step===5&&(
-            <div className="space-y-5">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-bold text-gray-900">Revisão Final</h2>
-                <span className={`text-xs font-bold px-3 py-1 rounded-full border ${cm.badge||""}`}>{convenio}</span>
-              </div>
-              <div className="rounded-2xl border-2 border-gray-200 overflow-hidden shadow-sm">
-                <div className={`${cm.bar||"bg-gray-700"} px-4 py-3 flex items-center justify-between`}>
-                  <span className="text-white font-bold">{convenio}</span>
-                  <span className="text-white/60 text-xs">Guia de Solicitação de Internação</span>
-                </div>
-                <div className="p-4 space-y-4 text-sm">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div><p className="text-xs text-gray-400 uppercase font-semibold mb-1">Paciente</p>
-                      <p className="font-bold text-gray-800">{paciente.nome||"—"}</p>
-                      <p className="text-xs text-gray-500">{paciente.carteira||"Sem carteira"}</p>
-                      {paciente.validade&&<p className="text-xs text-gray-400">Val. {paciente.validade}</p>}
-                      {paciente.plano&&<p className="text-xs text-gray-400">{paciente.plano}</p>}
-                    </div>
-                    <div><p className="text-xs text-gray-400 uppercase font-semibold mb-1">Hospital</p>
-                      <p className="font-bold text-gray-800">{paciente.hospital==="__outro__"?(paciente.hospitalCustom||""):paciente.hospital}</p>
-                      <p className="text-xs text-gray-500">{carater==="E"?"Eletivo":"Urgência"} · {["","Hospitalar","Hospital-dia","Domiciliar"][regime]}</p>
-                      <p className="text-xs text-gray-400">{diarias} diária(s)</p>
-                    </div>
-                  </div>
-                  <div className="bg-gray-50 rounded-xl p-3 space-y-1.5">
-                    <p className="text-xs text-gray-400 uppercase font-semibold">Procedimentos</p>
-                    {[procPrincipal,...procsSecundarios].filter(Boolean).map((p,i)=>(
-                      <div key={p.codigo} className="flex items-center gap-2">
-                        <span className="font-mono text-xs font-bold text-gray-600 shrink-0">{p.codigo}</span>
-                        <span className="text-xs text-gray-700 flex-1 truncate">{p.nome}</span>
-                        {i===0&&<span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full shrink-0">principal</span>}
-                      </div>
-                    ))}
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div><p className="text-xs text-gray-400 uppercase font-semibold mb-1">CID-10</p><p className="font-mono font-bold text-gray-800">{paciente.cid||"—"}</p></div>
-                    {opmes.length>0&&<div><p className="text-xs text-gray-400 uppercase font-semibold mb-1">OPMEs</p><p className="text-sm text-gray-700">{opmes.length} item(ns)</p></div>}
-                  </div>
-                  {justificativa&&<div><p className="text-xs text-gray-400 uppercase font-semibold mb-1">Indicação Clínica</p><p className="text-xs text-gray-600 line-clamp-3">{justificativa}</p></div>}
-                  <div className="border-t border-gray-100 pt-3">
-                    <p className="text-xs text-gray-400 uppercase font-semibold mb-1">Médico Solicitante</p>
-                    <p className="text-xs font-bold text-gray-800">{MEDICO.nome}</p>
-                    <p className="text-xs text-gray-400">{MEDICO.conselho} {MEDICO.numero}-{MEDICO.uf} · RQE {MEDICO.rqe}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* TCLE toggle */}
-              {getTCLE(procPrincipal?.codigo) !== null && (
-                <div className={`flex items-center justify-between p-4 rounded-xl border-2 transition cursor-pointer ${gerarComTCLE?"border-emerald-400 bg-emerald-50":"border-gray-200 bg-gray-50"}`}
-                  onClick={()=>setGerarComTCLE(v=>!v)}>
-                  <div className="flex items-center gap-3">
-                    <span className="text-2xl">📋</span>
-                    <div>
-                      <p className="font-bold text-gray-900 text-sm">Incluir Termo de Consentimento (TCLE)</p>
-                      <p className="text-xs text-gray-500">Gerado no padrão SBU, pronto para assinar</p>
-                    </div>
-                  </div>
-                  <div className={`w-12 h-6 rounded-full transition-all flex items-center px-1 ${gerarComTCLE?"bg-emerald-500":"bg-gray-300"}`}>
-                    <div className={`w-4 h-4 rounded-full bg-white shadow transition-all ${gerarComTCLE?"translate-x-6":"translate-x-0"}`}></div>
-                  </div>
-                </div>
-              )}
-              {getTCLE(procPrincipal?.codigo) === null && gerarComTCLE && procPrincipal && (
-                <div className="flex items-center gap-3 p-3 bg-amber-50 border border-amber-200 rounded-xl">
-                  <span>🤖</span>
-                  <p className="text-xs text-amber-800">TCLE para este procedimento será gerado pela IA com base nas diretrizes SBU.</p>
-                  <button onClick={()=>setGerarComTCLE(false)} className="ml-auto text-amber-600 text-xs underline shrink-0">Remover</button>
-                </div>
-              )}
-
-              {/* Botão Gerar PDF */}
-              <button onClick={handleGerarPDF} disabled={gerando}
-                className="w-full flex items-center justify-center gap-3 py-4 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-bold rounded-2xl shadow-lg hover:from-green-700 hover:to-emerald-700 disabled:opacity-60 transition text-base">
-                {gerando?(
-                  <>
-                    <div className="w-5 h-5 border-3 border-white border-t-transparent rounded-full animate-spin"></div>
-                    <span>Gerando guia com IA...</span>
-                  </>
-                ):(
-                  <>
-                    <span className="text-2xl">📄</span>
-                    <span>Gerar {gerarComTCLE?"Guia + TCLE":"Guia Preenchida"}</span>
-                    <span className="text-green-200 text-sm font-normal">→ PDF</span>
-                  </>
-                )}
-              </button>
-
-              <div className="flex gap-3">
-                <button onClick={()=>setStep(4)} className="flex-1 py-3 border border-gray-200 text-gray-600 rounded-xl text-sm font-medium hover:bg-gray-50">← Voltar</button>
-                <button onClick={reset} className="flex-1 py-3 border border-gray-200 text-gray-500 rounded-xl text-sm font-medium hover:bg-gray-50">🔄 Nova Guia</button>
-              </div>
-            </div>
-          )}
-
+            )}
+          </div>
         </div>
 
-        <p className="text-center text-xs text-gray-400 mt-4">
+        {/* Local e Internação */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 space-y-3">
+          <h2 className="font-bold text-gray-800 text-sm">Local e Internação</h2>
+          <div>
+            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Hospital / Local Solicitado</label>
+            <select className="w-full mt-1 bg-white border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={paciente.hospital||getHospitais(convenio)[0]} onChange={e=>setPaciente(p=>({...p,hospital:e.target.value}))}>
+              {getHospitais(convenio).map(h=><option key={h}>{h}</option>)}
+              <option value="__outro__">Outro...</option>
+            </select>
+            {paciente.hospital==="__outro__"&&(
+              <div className="mt-2">
+                <Field label="Nome do hospital" value={paciente.hospitalCustom||""} onChange={e=>setPaciente(p=>({...p,hospitalCustom:e.target.value}))} placeholder="Digite o nome"/>
+              </div>
+            )}
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <div className="col-span-2">
+              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Regime</label>
+              <select className="w-full mt-1 bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={regime} onChange={e=>setRegime(e.target.value)}>
+                <option value="1">Hospitalar</option>
+                <option value="2">Hospital-dia</option>
+                <option value="3">Domiciliar</option>
+              </select>
+            </div>
+            <Field label="Diárias" value={diarias} onChange={e=>setDiarias(e.target.value)} placeholder="1"/>
+          </div>
+        </div>
+
+        {/* Indicação Clínica */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 space-y-3">
+          <h2 className="font-bold text-gray-800 text-sm">Indicação Clínica</h2>
+          {procPrincipal&&getJustificativas(procPrincipal.codigo,paciente.cid).length>0&&(
+            <div className="space-y-2">
+              {getJustificativas(procPrincipal.codigo,paciente.cid).map((t,i)=>(
+                <button key={i} onClick={()=>setJustificativa(t)}
+                  className={`w-full text-left text-xs p-3 rounded-xl border-2 transition ${justificativa===t?"border-green-500 bg-green-50 text-green-800":"border-gray-200 bg-gray-50 text-gray-600 hover:border-green-400 hover:bg-green-50"}`}>
+                  {t.length>120?t.slice(0,120)+"…":t}
+                </button>
+              ))}
+            </div>
+          )}
+          <Field label="Texto da indicação" value={justificativa} onChange={e=>setJustificativa(e.target.value)} multiline placeholder="Digite a indicação clínica para a internação..."/>
+        </div>
+
+        {/* OPMEs */}
+        {opmes.length>0&&(
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 space-y-3">
+            <h2 className="font-bold text-gray-800 text-sm">OPMEs</h2>
+            <div className="space-y-2">
+              {opmes.map((o,i)=>(
+                <div key={i} className="flex items-center gap-2 bg-purple-50 border border-purple-200 rounded-xl px-3 py-2">
+                  <span className="text-sm text-gray-700 flex-1">{o.descricao}</span>
+                  <span className="text-xs text-gray-400 mr-2 shrink-0">{o.quantidade}</span>
+                  <button onClick={()=>setOpmes(os=>os.filter((_,j)=>j!==i))} className="text-purple-400 hover:text-red-500 text-xl leading-none">×</button>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-gray-400">Sugeridas com base no procedimento. Remova as que não se aplicam.</p>
+          </div>
+        )}
+
+        {/* TCLE toggle */}
+        {procPrincipal&&(
+          <div className={`flex items-center justify-between p-4 bg-white rounded-2xl border-2 shadow-sm transition cursor-pointer ${gerarComTCLE?"border-emerald-400 bg-emerald-50":"border-gray-200"}`}
+            onClick={()=>setGerarComTCLE(v=>!v)}>
+            <div className="flex items-center gap-3">
+              <span className="text-xl">📋</span>
+              <div>
+                <p className="font-bold text-gray-900 text-sm">Incluir TCLE</p>
+                <p className="text-xs text-gray-500">{getTCLE(procPrincipal.codigo)!==null?"Pré-definido · padrão SBU":"Gerado pela IA"}</p>
+              </div>
+            </div>
+            <div className={`w-12 h-6 rounded-full transition-all flex items-center px-1 ${gerarComTCLE?"bg-emerald-500":"bg-gray-300"}`}>
+              <div className={`w-4 h-4 rounded-full bg-white shadow transition-all ${gerarComTCLE?"translate-x-6":"translate-x-0"}`}></div>
+            </div>
+          </div>
+        )}
+
+        {/* Botão Gerar */}
+        <button onClick={handleGerarPDF} disabled={gerando||!convenio||!paciente.nome||!procPrincipal}
+          className="w-full flex items-center justify-center gap-3 py-4 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-bold rounded-2xl shadow-lg hover:from-green-700 hover:to-emerald-700 disabled:opacity-40 transition text-base">
+          {gerando?(
+            <>
+              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              <span>Gerando{convenio==="Bradesco Saúde"?"":" com IA"}...</span>
+            </>
+          ):(
+            <>
+              <span className="text-xl">📄</span>
+              <span>Gerar {gerarComTCLE&&procPrincipal?"Guia + TCLE":"Guia"}</span>
+              <span className="opacity-60 text-sm">→ PDF</span>
+            </>
+          )}
+        </button>
+
+        <button onClick={reset}
+          className="w-full py-3 border border-gray-200 text-gray-500 rounded-xl text-sm font-medium hover:bg-gray-50 transition">
+          🔄 Limpar formulário
+        </button>
+
+        <p className="text-center text-xs text-gray-400 pb-4">
           Dr. {MEDICO.nome.split(" ").slice(0,2).join(" ")} · {MEDICO.especialidade} · {MEDICO.conselho} {MEDICO.numero}-{MEDICO.uf}
         </p>
       </div>
@@ -2349,7 +2241,6 @@ export default function App() {
         <CameraModal onClose={()=>setShowCamera(false)}
           onDataExtracted={data=>{handleCardData(data);setShowCamera(false);}}/>
       )}
-
       {pdfHtml&&(
         <PDFModal htmlContent={pdfHtml} convenio={convenio} titulo="Guia de Internação"
           pacienteNome={paciente.nome} onClose={()=>setPdfHtml(null)}
