@@ -482,8 +482,337 @@ Se não for carteira: {"erro":"Imagem não reconhecida como carteira de convêni
   return JSON.parse(data.content?.map(b=>b.text||"").join("").replace(/```json|```/g,"").trim());
 }
 
+// ─── TEMPLATE BRADESCO SAÚDE ─────────────────────────────────────────────────
+function gerarGuiaBradesco(dados) {
+  const { paciente, medico, procPrincipal, procsSecundarios, justificativa, opmes, carater, regime, diarias, cid } = dados;
+  const hospital = paciente.hospital === "__outro__" ? (paciente.hospitalCustom||"") : paciente.hospital;
+  const dataHoje = new Date().toLocaleDateString("pt-BR");
+  const regimeTexto = {"1":"Hospitalar","2":"Hospital-dia","3":"Domiciliar"}[regime]||"Hospitalar";
+  const caraterTexto = carater==="E"?"Eletivo":"Urgência/Emergência";
+  const todosProcs = [procPrincipal, ...procsSecundarios].filter(Boolean);
+  const nGuia = String(Date.now()).slice(-7);
+  const temOPME = opmes && opmes.filter(o=>o.descricao).length > 0;
+
+  const procRows = Array.from({length:12},(_,i)=>{
+    const p = todosProcs[i];
+    return `<tr>
+      <td style="border:1px solid #000;border-top:none;padding:1px 3px;font-size:6.5pt;white-space:nowrap;">${i+1}&nbsp;-&nbsp;${p?p.tabela||"":""}</td>
+      <td style="border:1px solid #000;border-top:none;border-left:none;padding:1px 3px;font-size:6.5pt;">${p?p.codigo||"":""}</td>
+      <td style="border:1px solid #000;border-top:none;border-left:none;padding:1px 3px;font-size:6.5pt;">${p?p.nome||"":""}</td>
+      <td style="border:1px solid #000;border-top:none;border-left:none;padding:1px 3px;font-size:6.5pt;text-align:center;">${p?"1":""}</td>
+      <td style="border:1px solid #000;border-top:none;border-left:none;padding:1px 3px;font-size:6.5pt;"></td>
+    </tr>`;
+  }).join("");
+
+  // Logo Bradesco Saúde (SVG fiel ao oficial)
+  const logo = `<svg width="130" height="52" viewBox="0 0 130 52" xmlns="http://www.w3.org/2000/svg">
+    <rect x="1" y="1" width="40" height="40" rx="8" fill="#CC0000"/>
+    <path d="M10 8 L10 33 L22 33 Q32 33 32 26 Q32 21 26 20 Q31 18 31 13 Q31 8 22 8 Z
+             M17 14 L20 14 Q24 14 24 17 Q24 20 20 20 L17 20 Z
+             M17 24 L21 24 Q26 24 26 27.5 Q26 31 21 31 L17 31 Z" fill="white"/>
+    <text x="48" y="24" font-family="Arial,sans-serif" font-weight="bold" font-size="15" fill="#CC0000" letter-spacing="-0.3">bradesco</text>
+    <text x="48" y="38" font-family="Arial,sans-serif" font-size="11" fill="#CC0000">saúde</text>
+  </svg>`;
+
+  const C = "#CC0000"; // vermelho Bradesco
+  const hdr = `background:${C};color:#fff;font-weight:bold;font-size:7pt;padding:2px 4px;`;
+  const lbl = `font-size:5.5pt;color:#333;display:block;padding:1px 2px 0;line-height:1.2;`;
+  const val = `display:block;padding:1px 3px 2px;font-size:7pt;min-height:13px;`;
+  const cel = `border:1px solid #000;vertical-align:top;padding:0;`;
+
+  return `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<style>
+@page { margin: 0; size: A4 portrait; }
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:Arial,Helvetica,sans-serif;font-size:7pt;width:210mm;min-height:297mm;padding:5mm 5mm 4mm 5mm;color:#000;}
+table{border-collapse:collapse;width:100%;table-layout:fixed;}
+</style>
+</head>
+<body>
+
+<!-- CABEÇALHO -->
+<table style="margin-bottom:3px;border-collapse:collapse;">
+  <tr>
+    <td style="width:38%;padding:2px 4px;vertical-align:middle;">${logo}</td>
+    <td style="width:38%;text-align:center;vertical-align:middle;padding:4px 0;">
+      <div style="font-size:12pt;font-weight:bold;color:${C};line-height:1.25;">GUIA DE SOLICITAÇÃO<br>DE INTERNAÇÃO</div>
+    </td>
+    <td style="width:24%;border:1.5px solid #000;padding:3px 5px;vertical-align:top;">
+      <span style="${lbl}">2 - N.º Guia no Prestador</span>
+      <span style="font-size:10pt;font-weight:bold;display:block;margin-top:1px;">${nGuia}</span>
+    </td>
+  </tr>
+</table>
+
+<!-- CAMPOS 1 E 3 -->
+<table>
+  <tr>
+    <td style="${cel}width:22%;">
+      <span style="${lbl}">1 - Registro ANS</span>
+      <span style="${val}">005711</span>
+    </td>
+    <td style="${cel}border-left:none;width:78%;">
+      <span style="${lbl}">3 - Número da Guia Atribuído pela Operadora</span>
+      <span style="${val}"> </span>
+    </td>
+  </tr>
+  <tr>
+    <td style="${cel}border-top:none;width:22%;">
+      <span style="${lbl}">4 - Data da Autorização</span>
+      <span style="${val}"> </span>
+    </td>
+    <td style="${cel}border-top:none;border-left:none;width:78%;">
+      <table style="border-collapse:collapse;width:100%;">
+        <tr>
+          <td style="width:50%;vertical-align:top;padding:0;">
+            <span style="${lbl}">5 - Senha</span>
+            <span style="${val}"> </span>
+          </td>
+          <td style="width:50%;border-left:1px solid #000;vertical-align:top;padding:0;">
+            <span style="${lbl}">6 - Data de Validade da Senha</span>
+            <span style="${val}"> </span>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+
+<!-- DADOS DO BENEFICIÁRIO -->
+<table style="margin-top:2px;">
+  <tr><td colspan="3" style="${hdr}">Dados do Beneficiário</td></tr>
+  <tr>
+    <td style="${cel}border-top:none;width:58%;">
+      <span style="${lbl}">7 - Número da Carteira</span>
+      <span style="${val}">${paciente.carteira||""}</span>
+    </td>
+    <td style="${cel}border-top:none;border-left:none;width:26%;">
+      <span style="${lbl}">8 - Validade da Carteira</span>
+      <span style="${val}">${paciente.validade||""}</span>
+    </td>
+    <td style="${cel}border-top:none;border-left:none;width:16%;">
+      <span style="${lbl}">9 - Atendimento a RN</span>
+      <span style="${val}"> </span>
+    </td>
+  </tr>
+  <tr>
+    <td colspan="3" style="${cel}border-top:none;">
+      <span style="${lbl}">50 - Nome Social</span>
+      <span style="${val}"> </span>
+    </td>
+  </tr>
+  <tr>
+    <td colspan="3" style="${cel}border-top:none;">
+      <span style="${lbl}">10 - Nome</span>
+      <span style="${val}font-weight:bold;">${paciente.nome||""}</span>
+    </td>
+  </tr>
+</table>
+
+<!-- DADOS DO CONTRATADO SOLICITANTE -->
+<table style="margin-top:2px;">
+  <tr><td colspan="5" style="${hdr}">Dados do Contratado Solicitante</td></tr>
+  <tr>
+    <td style="${cel}border-top:none;width:28%;">
+      <span style="${lbl}">12 - Código na Operadora</span>
+      <span style="${val}"> </span>
+    </td>
+    <td colspan="4" style="${cel}border-top:none;border-left:none;width:72%;">
+      <span style="${lbl}">13 - Nome do Contratado</span>
+      <span style="${val}">Dr. ${medico.nome}</span>
+    </td>
+  </tr>
+  <tr>
+    <td style="${cel}border-top:none;width:34%;">
+      <span style="${lbl}">14 - Nome do Profissional Solicitante</span>
+      <span style="${val}">Dr. ${medico.nome}</span>
+    </td>
+    <td style="${cel}border-top:none;border-left:none;width:11%;">
+      <span style="${lbl}">15 - Conselho Profissional</span>
+      <span style="${val}">${medico.conselho}</span>
+    </td>
+    <td style="${cel}border-top:none;border-left:none;width:28%;">
+      <span style="${lbl}">16 - Número no Conselho</span>
+      <span style="${val}">${medico.numero}-${medico.uf}</span>
+    </td>
+    <td style="${cel}border-top:none;border-left:none;width:8%;">
+      <span style="${lbl}">17 - UF</span>
+      <span style="${val}">${medico.uf}</span>
+    </td>
+    <td style="${cel}border-top:none;border-left:none;width:19%;">
+      <span style="${lbl}">18 - Código CBO</span>
+      <span style="${val}">${medico.cbo}</span>
+    </td>
+  </tr>
+</table>
+
+<!-- DADOS DO HOSPITAL / INTERNAÇÃO -->
+<table style="margin-top:2px;">
+  <tr><td colspan="6" style="${hdr}">Dados do Hospital/Local Solicitado/Dados da Internação</td></tr>
+  <tr>
+    <td style="${cel}border-top:none;width:24%;">
+      <span style="${lbl}">19 - Código na Operadora/CNPJ</span>
+      <span style="${val}"> </span>
+    </td>
+    <td colspan="4" style="${cel}border-top:none;border-left:none;width:52%;">
+      <span style="${lbl}">20 - Nome do Hospital/Local Solicitado</span>
+      <span style="${val}">${hospital}</span>
+    </td>
+    <td style="${cel}border-top:none;border-left:none;width:24%;">
+      <span style="${lbl}">21 - Data Sugerida para Internação</span>
+      <span style="${val}">${dataHoje}</span>
+    </td>
+  </tr>
+  <tr>
+    <td style="${cel}border-top:none;width:14%;">
+      <span style="${lbl}">22 - Caráter do Atendimento</span>
+      <span style="${val}">${caraterTexto}</span>
+    </td>
+    <td style="${cel}border-top:none;border-left:none;width:14%;">
+      <span style="${lbl}">23 - Tipo de Internação</span>
+      <span style="${val}">Cirúrgico</span>
+    </td>
+    <td style="${cel}border-top:none;border-left:none;width:18%;">
+      <span style="${lbl}">24 - Regime de Internação</span>
+      <span style="${val}">${regimeTexto}</span>
+    </td>
+    <td style="${cel}border-top:none;border-left:none;width:18%;">
+      <span style="${lbl}">25 - Qtde. Diárias Solicitadas</span>
+      <span style="${val}">${diarias}</span>
+    </td>
+    <td style="${cel}border-top:none;border-left:none;width:18%;">
+      <span style="${lbl}">26 - Previsão de Uso de OPME</span>
+      <span style="${val}">${temOPME?"Sim":"Não"}</span>
+    </td>
+    <td style="${cel}border-top:none;border-left:none;width:18%;">
+      <span style="${lbl}">27 - Previsão de Uso de Quimioterápico</span>
+      <span style="${val}">Não</span>
+    </td>
+  </tr>
+  <tr>
+    <td colspan="6" style="${cel}border-top:none;">
+      <span style="${lbl}">28 - Indicação Clínica</span>
+      <div style="padding:2px 3px;min-height:58px;font-size:7pt;white-space:pre-wrap;line-height:1.35;">${justificativa||""}</div>
+    </td>
+  </tr>
+</table>
+
+<!-- CIDs -->
+<table>
+  <tr>
+    <td style="${cel}border-top:none;width:18%;">
+      <span style="${lbl}">29 - CID 10 Principal (Opcional)</span>
+      <span style="${val}">${cid||""}</span>
+    </td>
+    <td style="${cel}border-top:none;border-left:none;width:14%;">
+      <span style="${lbl}">30 - CID 10 (2) (Opcional)</span>
+      <span style="${val}"> </span>
+    </td>
+    <td style="${cel}border-top:none;border-left:none;width:14%;">
+      <span style="${lbl}">31 - CID 10 (3) (Opcional)</span>
+      <span style="${val}"> </span>
+    </td>
+    <td style="${cel}border-top:none;border-left:none;width:14%;">
+      <span style="${lbl}">32 - CID 10 (4) (Opcional)</span>
+      <span style="${val}"> </span>
+    </td>
+    <td style="${cel}border-top:none;border-left:none;width:40%;">
+      <span style="${lbl}">33 - Indicação de Acidente (Acidente ou Doença Relacionada)</span>
+      <span style="${val}"> </span>
+    </td>
+  </tr>
+</table>
+
+<!-- PROCEDIMENTOS -->
+<table style="margin-top:2px;">
+  <tr><td colspan="5" style="${hdr}">Procedimentos ou Itens Assistenciais Solicitados</td></tr>
+  <tr style="background:#f5f5f5;">
+    <th style="border:1px solid #000;border-top:none;padding:2px 3px;font-size:6pt;width:28%;text-align:left;font-weight:bold;">34 - Tabela&nbsp;&nbsp;&nbsp;35 - Código do Procedimento ou Item Assistencial</th>
+    <th style="border:1px solid #000;border-top:none;border-left:none;padding:2px 3px;font-size:6pt;width:0%;display:none;"></th>
+    <th style="border:1px solid #000;border-top:none;border-left:none;padding:2px 3px;font-size:6pt;width:46%;text-align:left;font-weight:bold;">36 - Descrição</th>
+    <th style="border:1px solid #000;border-top:none;border-left:none;padding:2px 3px;font-size:6pt;width:13%;text-align:center;font-weight:bold;">37 - Qtde. Solic.</th>
+    <th style="border:1px solid #000;border-top:none;border-left:none;padding:2px 3px;font-size:6pt;width:13%;text-align:center;font-weight:bold;">38 - Qtde. Aut.</th>
+  </tr>
+  ${procRows}
+</table>
+
+<!-- DADOS DA AUTORIZAÇÃO -->
+<table style="margin-top:2px;">
+  <tr><td colspan="3" style="${hdr}">Dados da Autorização</td></tr>
+  <tr>
+    <td style="${cel}border-top:none;width:34%;">
+      <span style="${lbl}">39 - Data Provável da Admissão Hospitalar</span>
+      <span style="${val}"> </span>
+    </td>
+    <td style="${cel}border-top:none;border-left:none;width:32%;">
+      <span style="${lbl}">40 - Qtde. Diárias Autorizadas</span>
+      <span style="${val}"> </span>
+    </td>
+    <td style="${cel}border-top:none;border-left:none;width:34%;">
+      <span style="${lbl}">41 - Tipo de Acomodação Autorizada</span>
+      <span style="${val}"> </span>
+    </td>
+  </tr>
+  <tr>
+    <td style="${cel}border-top:none;width:34%;">
+      <span style="${lbl}">42 - Código na Operadora/CNPJ Autorizado</span>
+      <span style="${val}"> </span>
+    </td>
+    <td style="${cel}border-top:none;border-left:none;width:46%;">
+      <span style="${lbl}">43 - Nome do Hospital/Local Autorizado</span>
+      <span style="${val}"> </span>
+    </td>
+    <td style="${cel}border-top:none;border-left:none;width:20%;">
+      <span style="${lbl}">44 - Código CNES</span>
+      <span style="${val}"> </span>
+    </td>
+  </tr>
+  <tr>
+    <td colspan="3" style="${cel}border-top:none;">
+      <span style="${lbl}">45 - Observação/Justificativa</span>
+      <div style="padding:2px 3px;min-height:44px;font-size:7pt;"> </div>
+    </td>
+  </tr>
+</table>
+
+<!-- ASSINATURAS -->
+<table style="margin-top:2px;">
+  <tr>
+    <td style="${cel}width:22%;">
+      <span style="${lbl}">46 - Data da Solicitação</span>
+      <span style="${val}">${dataHoje}</span>
+    </td>
+    <td style="${cel}border-left:none;width:26%;">
+      <span style="${lbl}">47 - Assinatura do Profissional Solicitante</span>
+      <div style="height:28px;"> </div>
+    </td>
+    <td style="${cel}border-left:none;width:26%;">
+      <span style="${lbl}">48 - Assinatura do Beneficiário ou Responsável</span>
+      <div style="height:28px;"> </div>
+    </td>
+    <td style="${cel}border-left:none;width:26%;">
+      <span style="${lbl}">49 - Assinatura do Responsável pela Autorização</span>
+      <div style="height:28px;"> </div>
+    </td>
+  </tr>
+</table>
+
+</body>
+</html>`;
+}
+
+// ─── GERADOR DE PDF / GUIA ────────────────────────────────────────────────────
 async function gerarPDF(dados) {
   const { convenio, paciente, medico, procPrincipal, procsSecundarios, justificativa, opmes, carater, regime, diarias, cid } = dados;
+
+  // Bradesco usa template estático fiel ao formulário TISS oficial
+  if (convenio === "Bradesco Saúde") {
+    return gerarGuiaBradesco(dados);
+  }
+
   const hospital = paciente.hospital === "__outro__" ? (paciente.hospitalCustom||"") : paciente.hospital;
   const todosProcs = [procPrincipal, ...procsSecundarios].filter(Boolean);
   const dataHoje = new Date().toLocaleDateString("pt-BR");
@@ -507,7 +836,7 @@ DATA: ${dataHoje}
 Gere um HTML completo e bem formatado que:
 1. Tenha o cabeçalho com nome/logo do convênio (${convenio}) e título "GUIA DE SOLICITAÇÃO DE INTERNAÇÃO"
 2. Use tabelas HTML para os campos, com bordas finas, fiel ao padrão da ANS/TISS
-3. Cores do convênio: Bradesco=vermelho escuro(#8B0000), SulAmérica=azul(#003DA5), Unimed=verde(#006633), Maximed=vermelho(#C0392B), Amil=azul(#003DA5), CASSI=azul(#003F87) laranja(#F7941D), Camed=verde(#007A3D), Saúde Petrobras=verde(#009640)
+3. Cores do convênio: SulAmérica=azul(#003DA5), Unimed=verde(#006633), Maximed=vermelho(#C0392B), Amil=azul(#003DA5), CASSI=azul(#003F87) laranja(#F7941D), Camed=verde(#007A3D), Saúde Petrobras=verde(#009640)
 4. Todos os campos preenchidos com os dados acima
 5. Seções: Dados do Beneficiário, Dados do Contratado Solicitante, Dados do Hospital/Internação, Indicação Clínica, CIDs, Procedimentos, OPMEs (se houver), Dados da Autorização, Assinaturas
 6. CSS inline para impressão A4 (max-width:210mm, font-size:8pt, padding:15mm). OBRIGATÓRIO incluir no <style>: @page { margin: 0; size: A4; } para suprimir URL e numeração automática do navegador.
